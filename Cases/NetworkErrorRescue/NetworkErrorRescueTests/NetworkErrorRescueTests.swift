@@ -1,37 +1,61 @@
-//
-//  NetworkErrorRescueTests.swift
-//  NetworkErrorRescueTests
-//
-//  Created by Carl on 2026/7/18.
-//
-
 import XCTest
+@testable import NetworkErrorRescue
 
+@MainActor
 final class NetworkErrorRescueTests: XCTestCase {
+    func testLoadUsersPublishesUsersOnSuccess() async {
+        let expectedUsers = [User(id: 1, name: "Ada", email: "ada@example.com")]
+        let service = MockUserService(result: .success(expectedUsers))
+        let viewModel = UsersViewModel(service: service)
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        await viewModel.loadUsers()
+
+        XCTAssertEqual(viewModel.users, expectedUsers)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertTrue(viewModel.hasLoaded)
+        XCTAssertEqual(service.fetchCallCount, 1)
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    func testLoadUsersPublishesReadableOfflineError() async {
+        let service = MockUserService(
+            result: .failure(URLError(.notConnectedToInternet))
+        )
+        let viewModel = UsersViewModel(service: service)
+
+        await viewModel.loadUsers()
+
+        XCTAssertTrue(viewModel.users.isEmpty)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "You appear to be offline. Check your connection and try again."
+        )
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertTrue(viewModel.hasLoaded)
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-        // XCTest Documentation
-        // https://developer.apple.com/documentation/xctest
+    func testLoadUsersPublishesEmptyState() async {
+        let service = MockUserService(result: .success([]))
+        let viewModel = UsersViewModel(service: service)
+
+        await viewModel.loadUsers()
+
+        XCTAssertTrue(viewModel.users.isEmpty)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.hasLoaded)
+    }
+}
+
+private final class MockUserService: UserServiceProtocol, @unchecked Sendable {
+    private let result: Result<[User], Error>
+    private(set) var fetchCallCount = 0
+
+    init(result: Result<[User], Error>) {
+        self.result = result
     }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        measure {
-            // Put the code you want to measure the time of here.
-        }
+    func fetchUsers() async throws -> [User] {
+        fetchCallCount += 1
+        return try result.get()
     }
-
 }

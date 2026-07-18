@@ -30,6 +30,12 @@ See commit `4404d59` for the intentionally fragile version.
 
 ![After: the screen explains the failure and provides a retry action](Screenshots/after-error-state.png)
 
+### Unit tests
+
+The three unit tests cover a successful response, a readable offline error, and an empty response.
+
+![Xcode test navigator showing all three unit tests passing](Screenshots/tests-passed.png)
+
 ## Run
 
 1. Open `NetworkErrorRescue.xcodeproj` in Xcode.
